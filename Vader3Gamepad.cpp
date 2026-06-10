@@ -10,8 +10,8 @@ BLEAdvertisedDevice* Vader3Gamepad::myDevice = nullptr;
 unsigned long Vader3Gamepad::lastDisconnectTime = 0;
 
 // BLE UUIDs
-static BLEUUID hidServiceUUID((uint16_t)0x1812);
-static BLEUUID reportCharUUID((uint16_t)0x2A4D);
+static BLEUUID hidServiceUUID(VADER_HID_SERVICE_UUID);
+static BLEUUID reportCharUUID(VADER_REPORT_CHAR_UUID);
 
 // BLE Callbacks
 class MyGamepadClientCallback : public BLEClientCallbacks {
@@ -48,32 +48,27 @@ class MyGamepadAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
 };
 
 // Конструктор
-Vader3Gamepad::Vader3Gamepad() : initialized(false) {
+Vader3Gamepad::Vader3Gamepad() : initialized(false), pSecurity(nullptr) {
   instance = this;
 
-  for (int i = 0; i < 20; i++) {
-    currentButtons[i] = false;
-    lastButtons[i] = false;
-  }
+  memset(currentButtons, 0, sizeof(currentButtons));
+  memset(lastButtons, 0, sizeof(lastButtons));
+  memset(rawAxes, 0, sizeof(rawAxes));
+  memset(axes, 0, sizeof(axes));
 
-  for (int i = 0; i < 6; i++) {
-    rawAxes[i] = 0;
-    axes[i] = 0;
-  }
-
-  currentDPad = 0;
-  lastDPad = 0;
+  currentDPad = DPAD_NONE;
+  lastDPad = DPAD_NONE;
 
   initDefaultMapping();
 }
 
 void Vader3Gamepad::initDefaultMapping() {
-  axisLeftX = 0;
-  axisLeftY = 1;
-  axisRightX = 2;
-  axisRightY = 3;
-  axisLeftTrigger = 12;
-  axisRightTrigger = 13;
+  axisLeftX = AXIS_LEFT_X;
+  axisLeftY = AXIS_LEFT_Y;
+  axisRightX = AXIS_RIGHT_X;
+  axisRightY = AXIS_RIGHT_Y;
+  axisLeftTrigger = AXIS_LEFT_TRIGGER;
+  axisRightTrigger = AXIS_RIGHT_TRIGGER;
   
   buttonMapping[BTN_A] = {8, 4};
   buttonMapping[BTN_B] = {8, 5};
@@ -141,8 +136,8 @@ void Vader3Gamepad::end() {
 void Vader3Gamepad::startScan(int scanSeconds) {
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyGamepadAdvertisedDeviceCallbacks());
-  pBLEScan->setInterval(1349);
-  pBLEScan->setWindow(449);
+  pBLEScan->setInterval(SCAN_INTERVAL);
+  pBLEScan->setWindow(SCAN_WINDOW);
   pBLEScan->setActiveScan(true);
   pBLEScan->start(scanSeconds, false);
 }
@@ -157,7 +152,7 @@ bool Vader3Gamepad::connectToServer() {
     return false;
   }
   
-  pClient->setMTU(185);
+  pClient->setMTU(BLE_MTU_SIZE);
   
   BLERemoteService* pRemoteService = pClient->getService(hidServiceUUID);
   if (pRemoteService == nullptr) {
@@ -179,14 +174,14 @@ bool Vader3Gamepad::connectToServer() {
 void Vader3Gamepad::update() {
   // Если не подключены и не пытаемся подключиться
   if (!connected && !doConnect) {
-    // Ждем 3 секунды после отключения перед переподключением
-    if (lastDisconnectTime == 0 || (millis() - lastDisconnectTime > 3000)) {
+    // Ждем RECONNECT_DELAY_MS после отключения перед переподключением
+    if (lastDisconnectTime == 0 || (millis() - lastDisconnectTime > RECONNECT_DELAY_MS)) {
       // Очищаем старый device и начинаем новый скан
       if (myDevice != nullptr) {
         delete myDevice;
         myDevice = nullptr;
       }
-      startScan(5);
+      startScan(SCAN_DURATION_SECONDS);
       doConnect = false;
     }
   }
@@ -281,36 +276,38 @@ int16_t Vader3Gamepad::normalize(uint8_t raw) {
 void Vader3Gamepad::parseData(uint8_t* data, size_t length) {
   memcpy(lastButtons, currentButtons, sizeof(currentButtons));
   lastDPad = currentDPad;
-  
+
   if (length >= 20) {
     rawAxes[0] = data[axisLeftX];
     rawAxes[1] = data[axisLeftY];
     rawAxes[2] = data[axisRightX];
     rawAxes[3] = data[axisRightY];
-    rawAxes[4] = data[axisLeftTrigger];
-    rawAxes[5] = data[axisRightTrigger];
     
+    // Проверка границ для триггеров
+    if (axisLeftTrigger < length) rawAxes[4] = data[axisLeftTrigger];
+    if (axisRightTrigger < length) rawAxes[5] = data[axisRightTrigger];
+
     axes[0] = normalize(rawAxes[0]);
     axes[2] = normalize(rawAxes[2]);
     axes[1] = normalize(rawAxes[1]);
     axes[3] = normalize(rawAxes[3]);
     axes[4] = rawAxes[4];
     axes[5] = rawAxes[5];
-    
-    uint8_t dpadValue = data[8] & 0x0F;
+
+    uint8_t dpadValue = data[DPAD_BYTE_INDEX] & DPAD_MASK;
     switch(dpadValue) {
-      case 0x01: currentDPad = DPAD_UP; break;
-      case 0x02: currentDPad = DPAD_UP_RIGHT; break;
-      case 0x03: currentDPad = DPAD_RIGHT; break;
-      case 0x04: currentDPad = DPAD_DOWN_RIGHT; break;
-      case 0x05: currentDPad = DPAD_DOWN; break;
-      case 0x06: currentDPad = DPAD_DOWN_LEFT; break;
-      case 0x07: currentDPad = DPAD_LEFT; break;
-      case 0x08: currentDPad = DPAD_UP_LEFT; break;
+      case DPAD_VAL_UP: currentDPad = DPAD_UP; break;
+      case DPAD_VAL_UP_RIGHT: currentDPad = DPAD_UP_RIGHT; break;
+      case DPAD_VAL_RIGHT: currentDPad = DPAD_RIGHT; break;
+      case DPAD_VAL_DOWN_RIGHT: currentDPad = DPAD_DOWN_RIGHT; break;
+      case DPAD_VAL_DOWN: currentDPad = DPAD_DOWN; break;
+      case DPAD_VAL_DOWN_LEFT: currentDPad = DPAD_DOWN_LEFT; break;
+      case DPAD_VAL_LEFT: currentDPad = DPAD_LEFT; break;
+      case DPAD_VAL_UP_LEFT: currentDPad = DPAD_UP_LEFT; break;
       default: currentDPad = DPAD_NONE; break;
     }
-    
-    for (int i = 0; i < 20; i++) {
+
+    for (int i = 0; i < BUTTON_COUNT; i++) {
       int byteIdx = buttonMapping[i].byteIndex;
       int bit = buttonMapping[i].bit;
       if (byteIdx < length) {

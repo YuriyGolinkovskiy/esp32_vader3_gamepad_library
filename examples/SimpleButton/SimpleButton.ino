@@ -5,14 +5,17 @@
 Vader3Gamepad gamepad;
 
 // Используем встроенный светодиод ESP32 (обычно GPIO 2)
-const int LED_PIN = 2;
+static constexpr int LED_PIN = 2;
+static constexpr unsigned long DEBOUNCE_DELAY_MS = 100;
 
 void setup() {
   pinMode(LED_PIN, OUTPUT);
   Serial.begin(115200);
-  
+
   // Запускаем поиск геймпада
-  gamepad.begin();
+  if (!gamepad.begin()) {
+    Serial.println("Ошибка инициализации геймпада!");
+  }
 }
 
 void loop() {
@@ -22,11 +25,7 @@ void loop() {
   // Если геймпад подключен
   if (gamepad.isConnected()) {
     // Включаем светодиод при нажатии кнопки A
-    if (gamepad.pressed(BTN_A)) {
-      digitalWrite(LED_PIN, HIGH);
-    } else {
-      digitalWrite(LED_PIN, LOW);
-    }
+    digitalWrite(LED_PIN, gamepad.pressed(BTN_A) ? HIGH : LOW);
 
     // Пример обработки однократного нажатия (переключение)
     if (gamepad.justPressed(BTN_B)) {
@@ -34,5 +33,5 @@ void loop() {
     }
   }
 
-  delay(100);
+  delay(DEBOUNCE_DELAY_MS);
 }

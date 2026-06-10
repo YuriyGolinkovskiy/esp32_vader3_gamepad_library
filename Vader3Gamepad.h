@@ -5,6 +5,42 @@
 #include <BLEDevice.h>
 #include <BLESecurity.h>
 
+// BLE Constants
+static constexpr uint16_t VADER_HID_SERVICE_UUID = 0x1812;
+static constexpr uint16_t VADER_REPORT_CHAR_UUID = 0x2A4D;
+
+// Scan parameters
+static constexpr uint16_t SCAN_INTERVAL = 1349;
+static constexpr uint16_t SCAN_WINDOW = 449;
+static constexpr uint16_t SCAN_DURATION_SECONDS = 5;
+static constexpr uint32_t RECONNECT_DELAY_MS = 3000;
+static constexpr uint16_t BLE_MTU_SIZE = 185;
+
+// Data indices
+static constexpr uint8_t AXIS_LEFT_X = 0;
+static constexpr uint8_t AXIS_LEFT_Y = 1;
+static constexpr uint8_t AXIS_RIGHT_X = 2;
+static constexpr uint8_t AXIS_RIGHT_Y = 3;
+static constexpr uint8_t AXIS_LEFT_TRIGGER = 12;
+static constexpr uint8_t AXIS_RIGHT_TRIGGER = 13;
+static constexpr uint8_t DPAD_BYTE_INDEX = 8;
+static constexpr uint8_t DPAD_MASK = 0x0F;
+
+// Array sizes
+static constexpr uint8_t BUTTON_COUNT = 20;
+static constexpr uint8_t AXIS_COUNT = 6;
+
+// D-pad values (from BLE report)
+static constexpr uint8_t DPAD_VAL_NONE = 0x00;
+static constexpr uint8_t DPAD_VAL_UP = 0x01;
+static constexpr uint8_t DPAD_VAL_UP_RIGHT = 0x02;
+static constexpr uint8_t DPAD_VAL_RIGHT = 0x03;
+static constexpr uint8_t DPAD_VAL_DOWN_RIGHT = 0x04;
+static constexpr uint8_t DPAD_VAL_DOWN = 0x05;
+static constexpr uint8_t DPAD_VAL_DOWN_LEFT = 0x06;
+static constexpr uint8_t DPAD_VAL_LEFT = 0x07;
+static constexpr uint8_t DPAD_VAL_UP_LEFT = 0x08;
+
 enum VaderButton {
   BTN_A = 0,
   BTN_B = 1,
