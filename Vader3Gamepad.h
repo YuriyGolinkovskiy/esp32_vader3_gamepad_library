@@ -96,6 +96,7 @@ private:
   int16_t axes[6];
 
   bool initialized;
+  BLESecurity* pSecurity;
 
   int axisLeftX, axisLeftY, axisRightX, axisRightY, axisLeftTrigger, axisRightTrigger;
   

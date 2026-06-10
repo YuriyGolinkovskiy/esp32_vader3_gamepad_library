@@ -1,6 +1,6 @@
 // SimpleButton.ino - Простой пример управления светодиодом с помощью кнопки A
 
-#include <Vader3Gamepad.h>
+#include "Vader3Gamepad.h"
 
 Vader3Gamepad gamepad;
 
@@ -33,4 +33,6 @@ void loop() {
       Serial.println("Кнопка B нажата!");
     }
   }
+
+  delay(100);
 }

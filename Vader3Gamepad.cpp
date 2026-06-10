@@ -107,7 +107,7 @@ bool Vader3Gamepad::begin(int scanSeconds) {
 
   BLEDevice::init("ESP32-Gamepad-Client");
 
-  BLESecurity* pSecurity = new BLESecurity();
+  pSecurity = new BLESecurity();
   pSecurity->setCapability(ESP_IO_CAP_NONE);
   pSecurity->setAuthenticationMode(true, false, true);
   BLEDevice::setSecurityCallbacks(new BLESecurityCallbacks());
@@ -126,6 +126,10 @@ void Vader3Gamepad::end() {
   if (myDevice) {
     delete myDevice;
     myDevice = nullptr;
+  }
+  if (pSecurity) {
+    delete pSecurity;
+    pSecurity = nullptr;
   }
   pInputReport = nullptr;
   connected = false;
